@@ -21,7 +21,7 @@ setup(name='dhcpspoof',
       install_requires=text('requirements.txt').split('\n'),
       entry_points={
           'console_scripts': [
-              'spoofing = spoofing.__main__',
+              'dhcpspoof = spoofing.__main__',
           ]
       },
       include_package_data=True,
