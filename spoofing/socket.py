@@ -1,15 +1,48 @@
 #!/usr/bin/python3 -tt
 import argparse
+from socket import socket, htons, SOCK_RAW, AF_PACKET
+from spoofing.packet import parse, IP_PROTOCOL
+
+
+
+class log:
+
+    def __init__(self, prefix):
+        self.prefix = prefix
+
+
+    def __call__(self, *args, **kwargs):
+        def wrapper (*args, **kwargs):
+            r = f(*args, **kwargs)
+            params = ' '.join(str(n) for n in args)
+            params += ' '.join(str(n) for n in kwargs)
+            print(self.prefix.format(f.__name__, params, r))
+            return r
+        return wrapper
 
 def spoof_init():
-    parser = argparse.ArgumentParser(prog='dhcpspoof', description='DHCP spoofing attack application')
+    parser = argparse.ArgumentParser(prog='dhcpspoof', description='DHCP spoofing attack application', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('-v', '--verbose', action='store_true', help='Runs in verbose mode')
-    parser.add_argument('sourceMachine', help='Attacked machine')
+    parser.add_argument('-i', '--interface', default='eth0', help='Network interface to track')
 
     options = parser.parse_args()
 
+    ETH_P_ALL = 3
+    s = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))
+    s.bind((options.interface, 0))
+
     if options.verbose:
-        print('spoof started with verbose mode')
+        print ('spoof started with verbose mode on %s' % options.interface)
     else:
-        print('spoof started')
+        print('spoof started on %s' % options.interface)
+
+    BUFFER_SIZE = 1518
+    while 1:
+        packet = parse(s.recv(BUFFER_SIZE))
+        if packet['ip']:
+            pass
+            #if (buff[23] == 0x11):
+            #    if (buff[36] == 0x00 and buff[37] == 0x43):
+            #        if (buff[284] == 0x03):
+            #            print("    >>>>>>>>DHCP Request Detected!\n");

@@ -2,7 +2,7 @@ Projeto de Redes de Computadores II
 ===================================
 
 Em Desenvolvimento
- - - DHCP spoofing attack
+ - DHCP spoofing attack
 
 Setup::
 
