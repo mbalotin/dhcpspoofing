@@ -3,8 +3,6 @@ import argparse
 from socket import socket, htons, SOCK_RAW, AF_PACKET
 from spoofing.packet import parse, IP_PROTOCOL
 
-
-
 class log:
 
     def __init__(self, prefix):
@@ -24,7 +22,7 @@ def spoof_init():
     parser = argparse.ArgumentParser(prog='dhcpspoof', description='DHCP spoofing attack application', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('-v', '--verbose', action='store_true', help='Runs in verbose mode')
-    parser.add_argument('-i', '--interface', default='eth0', help='Network interface to track')
+    parser.add_argument('-i', '--interface',  help='Network interface to track', required=True)
 
     options = parser.parse_args()
 
@@ -40,9 +38,12 @@ def spoof_init():
     BUFFER_SIZE = 1518
     while 1:
         packet = parse(s.recv(BUFFER_SIZE))
-        if packet['ip']:
+        try:
+            if packet.ip.udp.dhcp:
+                print ('Detected a dhcp packet:')
+                if packet.ip.udp.dhcp.type == 1:
+                    print ('    >is a Request/Discover')
+
+
+        except AttributeError:
             pass
-            #if (buff[23] == 0x11):
-            #    if (buff[36] == 0x00 and buff[37] == 0x43):
-            #        if (buff[284] == 0x03):
-            #            print("    >>>>>>>>DHCP Request Detected!\n");
