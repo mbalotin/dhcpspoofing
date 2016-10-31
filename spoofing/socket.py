@@ -42,7 +42,10 @@ def spoof_init():
             if packet.ip.udp.dhcp:
                 print ('Detected a dhcp packet:')
                 if packet.ip.udp.dhcp.type == 1:
-                    print ('    >is a Request/Discover')
+                    if packet.ip.udp.dhcp.dhcpOptions.dhcpType == 1:
+                        print ('    >is a Discover')
+                    elif packet.ip.udp.dhcp.dhcpOptions.dhcpType == 3:
+                        print ('    >is a Request')
 
 
         except AttributeError:

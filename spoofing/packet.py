@@ -49,6 +49,15 @@ class DhcpPacket:
         self.next_server_ip = inet_ntoa(dhcp_header[9])
         self.relay_agent_ip = inet_ntoa(dhcp_header[10])
         self.client_mac = dhcp_header[11]
+        self.dhcpOptions = DhcpOtions(buff, start + 34)
+
+
+class DhcpOtions:
+    def __init__(self, buff, start):
+        dhc_options_header = unpack('!206sBBB', buff[start: 285]) #206 useless bytes *202 of them are 0s* and 4 for Magic cookie
+        self.option = dhc_options_header[1]
+        self.length = dhc_options_header[2]
+        self.dhcpType = dhc_options_header[3]
 
 def parse(buff):
     return Packet(buff)
