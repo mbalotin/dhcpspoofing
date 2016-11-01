@@ -59,5 +59,46 @@ class DhcpOtions:
         self.length = dhc_options_header[2]
         self.dhcpType = dhc_options_header[3]
 
+#class DhcpOffer:
+#    def __init__(self, transactionID, clientMAC):
+#        #### Ethernet Header ##########
+#        destination = '\xff\xff\xff\xff\xff\xff'
+#        source = getMyMac()
+#        type = '\x08\x00'
+#        ### IP Header ################
+#        version_length = '\x45'
+#        tos = '\x10'
+#        total_length = '\x01\x48'
+#        identification = '\x00\x00'
+#        flags = '\x00'
+#        frag_offset = '\x00'
+#        ttl = '\x80'
+#        proto = '\x11'
+#        checksum = 0
+
+
+def getMyMAC():
+    # e.g \xff\xff\xff\xff\xff\xff = ff:ff:ff:ff:ff:ff
+    mac_num = hex(uuid.getnode())
+    mac = '\\x'.join(mac_num[i : i + 2] for i in range(2, 13, 2))
+    mac = '\\x'+mac
+
+def checksum(msg):
+    s = 0
+     
+    # loop taking 2 characters at a time
+    for i in range(0, len(msg), 2):
+        w = ord(msg[i]) + (ord(msg[i+1]) << 8 )
+        s = s + w
+     
+    s = (s>>16) + (s & 0xffff);
+    s = s + (s >> 16);
+     
+    #complement and mask to 4 byte short
+    s = ~s & 0xffff
+     
+    return s
+
+
 def parse(buff):
     return Packet(buff)

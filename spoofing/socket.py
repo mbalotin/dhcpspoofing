@@ -29,6 +29,7 @@ def spoof_init():
     ETH_P_ALL = 3
     s = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))
     s.bind((options.interface, 0))
+    #s.getsockname()[4] returns b'\xac\x16-4Y\x96' which seems to be the mac ?
 
     if options.verbose:
         print ('spoof started with verbose mode on %s' % options.interface)
