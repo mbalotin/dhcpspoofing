@@ -2,7 +2,7 @@
 from struct import unpack
 from binascii import hexlify
 from collections import defaultdict
-from socket import inet_ntoa
+from socket import socket, inet_ntoa, AF_INET, SOCK_DGRAM
 
 IP_PROTOCOL = 0x11
 UDP_PROTOCOL = b'0043'
@@ -74,7 +74,49 @@ class DhcpOtions:
 #        frag_offset = '\x00'
 #        ttl = '\x80'
 #        proto = '\x11'
-#        checksum = 0
+#        checksum = "??"
+#        source = getMyIP()
+#        destination = '\xff\xff\xff\xff'
+#        source_GeoIP = '\x00\x00\x00\x00'
+#        destination_GeoIP = '\xff\xff\xff\xff'
+#        ### UDP Header ###############
+#        source_port = '\x00\x43'
+#        destination_port = '\x00\x44'
+#        length = "?"
+#        cheksum = "?"
+#        ### Bootstrap Header ########
+#        message_type = '\x02'
+#        hw_type = '\x01'
+#        hops = '\x00'
+#        transaction_id = transactionID
+#        seconds_elapsed = '\x00\x00'
+#        bootp_flags = '\x00\x00'
+#        client_ip =
+#        your_ip_address = 
+#        next_server_ip
+#        relay_agent_ip
+#        client_mac = clientMAC
+#        client_hwaddr_padding = 
+#        server_hostname = 
+#        bootfile = 
+#        magic_cookie
+#        dhcp_message_type = 
+#        ?? 
+
+
+
+def getMyIP():
+    s = socket(AF_INET, SOCK_DGRAM)
+    s.connect(('8.8.8.8', 0))  # connecting to a UDP address doesn't send packets
+    local_ip_address = s.getsockname()[0]
+    splitted = local_ip_address.split('.')
+    ip_hexadecimal = ""
+    for byte in splitted:
+        hexadecimal = str(hex(int(byte)))
+        if len(hexadecimal) < 4:
+            hexadecimal = "x0".join(hexadecimal.rsplit("x", 1))
+        ip_hexadecimal += "\\" + hexadecimal[1:]
+    return ip_hexadecimal #e.g \xc0\xa8\x0f\x05 = 192.168.15.5
 
 
 def getMyMAC():
