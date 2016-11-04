@@ -2,6 +2,7 @@
 import argparse
 from socket import socket, htons, SOCK_RAW, AF_PACKET
 from spoofing.packet import parse, IP_PROTOCOL
+from spoofing.assembler import createOffer
 
 class log:
 
@@ -23,6 +24,7 @@ def spoof_init():
 
     parser.add_argument('-v', '--verbose', action='store_true', help='Runs in verbose mode')
     parser.add_argument('-i', '--interface',  help='Network interface to track', required=True)
+    parser.add_argument('-o', '--offer',action='store_true',  help='Testa bagaça')
 
     options = parser.parse_args()
 
@@ -47,6 +49,8 @@ def spoof_init():
                         print ('    >is a Discover')
                     elif packet.ip.udp.dhcp.dhcpOptions.dhcpType == 3:
                         print ('    >is a Request')
+                        if options.offer:
+                            print (createOffer( packet.ip.udp.dhcp.transaction_id,packet.destination_mac, b'\x01\x02\x03\x04', options.interface))
 
 
         except AttributeError:
