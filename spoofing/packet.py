@@ -62,7 +62,7 @@ class DhcpOtions:
 class TcpPacket:
     def __init__(self, buff, start):
         tcp_header = unpack('!HH4s4sH', buff[start:start+13])
-		self.dest_port = tcp_header[1]
+        self.dest_port = tcp_header[1]
         self.length_flags = tcp_header[12]
         self.length = length_flags >> 12
         if self.dest_port == 80 and (self.length_flags == 0x8018 or self.length_flags == 0x5018):
