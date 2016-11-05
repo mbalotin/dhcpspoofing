@@ -4,15 +4,15 @@ from binascii import hexlify
 from collections import defaultdict
 from socket import socket, inet_ntoa, AF_INET, SOCK_DGRAM
 
-IP_PROTOCOL = 0x11
-UDP_PROTOCOL = b'0043'
+IP_PROTOCOL = 0x0800
+UDP_PROTOCOL = 0x11
 TCP_PROTOCOL = 0x06
 
 class Packet:
     def __init__(self, buff):
         self.destination_mac, self.origin_mac, self.packet_type = unpack('!6s6sH', buff[0:14])
         self.ip = None
-        if (buff[23] == IP_PROTOCOL):
+        if (hex(self.packet_type) == hex(IP_PROTOCOL)):
             self.ip = IpPacket(buff)
 
 class IpPacket:
@@ -26,8 +26,11 @@ class IpPacket:
         self.source = inet_ntoa(ip_header[8]);
         self.destination = inet_ntoa(ip_header[9]);
         self.udp = None
-        if (hexlify(buff[36:38]) == UDP_PROTOCOL):
+        if ((hex(self.protocol)) == hex(UDP_PROTOCOL)):
             self.udp = UdpPacket(buff, 14 + self.length)
+        self.tcp = None
+        if((hex(self.protocol)) == hex(TCP_PROTOCOL)):
+        	self.tcp = TcpPacket(buff, 14 + self.length)
 
 class UdpPacket:
     def __init__(self, buff, start):
@@ -61,23 +64,54 @@ class DhcpOtions:
 
 class TcpPacket:
     def __init__(self, buff, start):
-        tcp_header = unpack('!HH4s4sH', buff[start:start+13])
+        tcp_header = unpack('!HH4s4sH', buff[start:start+14])
         self.dest_port = tcp_header[1]
-        self.length_flags = tcp_header[12]
-        self.length = length_flags >> 12
+        self.length_flags = tcp_header[4]
+        if hex(self.length_flags) == hex(0x8018):
+        	self.length = 32
+        else:
+        	self.length = 20
         if self.dest_port == 80 and (self.length_flags == 0x8018 or self.length_flags == 0x5018):
-            self.http = HttpPacket(buff,start+length)
+            self.http = HttpPacket(buff,start+self.length)
+        if self.dest_port == 443 and self.length_flags == 0x8018:
+        	self.https = HttpsPacket(buff,start+self.length)
 
 class HttpPacket:
     def __init__(self, buff, start):
-        domain = unpack('!24s'), buff[start+43:start+43+24]
+        buff_index = start
+        self.URL = None
+        if 0x47 == buff[buff_index]:
+            buff_index += 4
+            curr_byte = buff[buff_index]
+            URI = (curr_byte).to_bytes(1, byteorder='big')
+            buff_index += 1
+            curr_byte = buff[buff_index]
+            while hex(curr_byte) != hex(0x20):
+                URI += (curr_byte).to_bytes(1, byteorder='big')
+                buff_index += 1
+                curr_byte = buff[buff_index]
+            while curr_byte != 0x0a:
+                buff_index += 1
+                curr_byte = buff[buff_index]
+            while curr_byte != 0x20:
+                buff_index += 1
+                curr_byte = buff[buff_index]
+            buff_index += 1
+            curr_byte = buff[buff_index]
+            host = (curr_byte).to_bytes(1, byteorder='big')
+            buff_index += 1
+            curr_byte = buff[buff_index]
+            while curr_byte != 0x0d:
+                host += (curr_byte).to_bytes(1, byteorder='big')
+                buff_index += 1
+                curr_byte = buff[buff_index]
+            self.URL = host + URI
+
 
 class HttpsPacket:
     def __init__(self, buff, start):
-        content_type = 0
-        domain = 0
-
-
+        self.content_type = 0
+        self.domain = 0
 
 def parse(buff):
     return Packet(buff)
