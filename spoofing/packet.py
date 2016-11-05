@@ -50,15 +50,7 @@ class DhcpPacket:
         self.next_server_ip = inet_ntoa(dhcp_header[9])
         self.relay_agent_ip = inet_ntoa(dhcp_header[10])
         self.client_mac = dhcp_header[11]
-        self.dhcpOptions = DhcpOtions(buff, start + 34)
-
-class TcpPacket:
-    def __init__(self, buff, start):
-        tcp_header = unpack('!HH4s4sH', buff[start:start+13])
-		self.dest_port = tcp_header[1]
-        self.length_flags = tcp_header[12]
-        if self.dest_port == 80 and (self.length_flags == 0x8018 or self.length_flags == 0x5018):
-            self.http = HttpPacket
+        self.dhcpOptions = DhcpOtions(buff, start + 34)      
 
 class DhcpOtions:
     def __init__(self, buff, start):
@@ -66,6 +58,21 @@ class DhcpOtions:
         self.option = dhc_options_header[1]
         self.length = dhc_options_header[2]
         self.dhcpType = dhc_options_header[3]
+
+class TcpPacket:
+    def __init__(self, buff, start):
+        tcp_header = unpack('!HH4s4sH', buff[start:start+13])
+		self.dest_port = tcp_header[1]
+        self.length_flags = tcp_header[12]
+        self.length = length_flags >> 12
+        if self.dest_port == 80 and (self.length_flags == 0x8018 or self.length_flags == 0x5018):
+            self.http = HttpPacket(buff,start+length)
+
+class HttpPacket:
+    def __init__(self, buff, start):
+        http_header = unpack('!24s'), buff[start+43:start+43+24]
+
+
 
 def parse(buff):
     return Packet(buff)
