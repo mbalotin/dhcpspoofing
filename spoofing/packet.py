@@ -6,6 +6,7 @@ from socket import socket, inet_ntoa, AF_INET, SOCK_DGRAM
 
 IP_PROTOCOL = 0x11
 UDP_PROTOCOL = b'0043'
+TCP_PROTOCOL = 0x06
 
 class Packet:
     def __init__(self, buff):
@@ -51,6 +52,13 @@ class DhcpPacket:
         self.client_mac = dhcp_header[11]
         self.dhcpOptions = DhcpOtions(buff, start + 34)
 
+class TcpPacket:
+    def __init__(self, buff, start):
+        tcp_header = unpack('!HH4s4sH', buff[start:start+13])
+		self.dest_port = tcp_header[1]
+        self.length_flags = tcp_header[12]
+        if self.dest_port == 80 and (self.length_flags == 0x8018 or self.length_flags == 0x5018):
+            self.http = HttpPacket
 
 class DhcpOtions:
     def __init__(self, buff, start):
