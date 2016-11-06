@@ -49,12 +49,12 @@ def spoof_init():
         if packet.ip.udp.dhcp.type == 1:
             if packet.ip.udp.dhcp.dhcpOptions.dhcpType == 1:
                 print ('    >is a Discover')
-                #print (recv)
+                pacote = DhcpOffer(packet.ip.udp.dhcp.transaction_id, packet.origin_mac, packet.ip.udp.dhcp.client_ip).packet
+                print("Sending Offer")
+                s.send(pacote)
             elif packet.ip.udp.dhcp.dhcpOptions.dhcpType == 3:
                 print ('    >is a Request')
-            print ('criando pacote de request')
-            pacote = DhcpOffer(packet.ip.udp.dhcp.transaction_id, packet.origin_mac, packet.ip.udp.dhcp.client_ip).packet
-            print(pacote)
-            s.send(pacote)
+                print ('Sending ACK')
+            
 
 
