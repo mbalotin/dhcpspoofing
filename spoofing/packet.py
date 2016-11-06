@@ -3,6 +3,7 @@ from struct import unpack
 from binascii import hexlify
 from collections import defaultdict
 from socket import socket, inet_ntoa, AF_INET, SOCK_DGRAM
+from datetime import datetime
 
 IP_PROTOCOL = 0x0800
 UDP_PROTOCOL = 0x11
@@ -78,8 +79,9 @@ class TcpPacket:
 
 class HttpPacket:
     def __init__(self, buff, start):
-        buff_index = start
+        self.time = None
         self.URL = None
+        buff_index = start
         if 0x47 == buff[buff_index]:
             buff_index += 4
             curr_byte = buff[buff_index]
@@ -105,13 +107,34 @@ class HttpPacket:
                 host += (curr_byte).to_bytes(1, byteorder='big')
                 buff_index += 1
                 curr_byte = buff[buff_index]
+            self.time = datetime.now()
             self.URL = host + URI
 
 
 class HttpsPacket:
     def __init__(self, buff, start):
-        self.content_type = 0
-        self.domain = 0
+        self.time = None
+        self.domain = None
+        buff_index = start
+        if buff[buff_index] == 0x16:
+        	buff_index += 5
+        	if buff[buff_index] == 0x01:
+        		buff_index += 38
+        		buff_index += buff[buff_index] + 1
+        		buff_index += ((buff[buff_index] << 8) + buff[buff_index+1]) + 2
+        		buff_index += buff[buff_index] + 1
+        		buff_index += 9
+        		domain_length = (buff[buff_index] << 8) + buff[buff_index+1]
+        		buff_index += 2
+        		self.domain = (buff[buff_index]).to_bytes(1, byteorder='big')
+        		buff_index += 1
+        		domain_length -= 1
+        		while domain_length > 0:
+        			self.domain += (buff[buff_index]).to_bytes(1, byteorder='big')
+        			buff_index += 1
+        			domain_length -= 1
+
+        		self.time = datetime.now()
 
 def parse(buff):
     return Packet(buff)
