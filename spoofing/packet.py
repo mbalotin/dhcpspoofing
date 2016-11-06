@@ -166,7 +166,7 @@ def my_MAC():
 
 def _checksum(data):
     #calculate the header sum
-    ip_header_sum = sum(struct.unpack_from("6H", data))
+    ip_header_sum = sum(struct.unpack_from("8H", data))
     #add the carry
     ip_header_sum = (ip_header_sum & 0xFFFF) + (ip_header_sum >> 16 & 0xFFFF)
     #invert the sum, python does not support inversion (~a is -a + 1) so we have to do
