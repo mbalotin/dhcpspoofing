@@ -4,6 +4,7 @@ from binascii import hexlify, unhexlify
 from collections import defaultdict
 from socket import socket, inet_ntoa, AF_INET, SOCK_DGRAM
 import uuid
+import struct
 
 IP_PROTOCOL = 0x11
 UDP_PROTOCOL = b'0043'
@@ -78,8 +79,7 @@ class DhcpOffer:
         ip_header += b'\x00\x00' #checksum
         ip_header += my_IP() #source
         ip_header += b'\xff\xff\xff\xff' #destination
-
-        ip_header[10:12] = checksum_IP(ip_header)
+        ip_header = ip_header[:10] + struct.pack('i',_checksum(ip_header))[:2] + ip_header[12:]
 
         ### UDP Header ############### udp_header
         udp_header = b'\x00\x43' #source port 
@@ -159,23 +159,15 @@ def my_MAC():
     #print (unhexlify(mac_num))
     return unhexlify(mac_num)
 
-def checksum_IP(msg):
-    print(type(msg))
-    s = 0
-     
-    # loop taking 2 characters at a time
-    for i in range(0, len(msg), 2):
-        w = ord(msg[i]) + (ord(msg[i+1]) << 8 )
-        s = s + w
-     
-    s = (s>>16) + (s & 0xffff);
-    s = s + (s >> 16);
-     
-    #complement and mask to 4 byte short
-    s = ~s & 0xffff
-     
-    s = format(s,'#04x')
 
+def _checksum(data):
+    #calculate the header sum
+    ip_header_sum = sum(struct.unpack_from("6H", data))
+    #add the carry
+    ip_header_sum = (ip_header_sum & 0xFFFF) + (ip_header_sum >> 16 & 0xFFFF)
+    #invert the sum, python does not support inversion (~a is -a + 1) so we have to do
+    #little trick: ~a is the same as 0xFFFF & ~a
+    return ~ip_header_sum & 0xFFFF
 
 def parse(buff):
     return Packet(buff)
