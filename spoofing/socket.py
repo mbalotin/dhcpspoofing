@@ -2,7 +2,6 @@
 import argparse
 from socket import socket, htons, SOCK_RAW, AF_PACKET
 from spoofing.packet import parse, IP_PROTOCOL, DhcpOffer
-import sys
 
 class log:
 
@@ -24,6 +23,7 @@ def spoof_init():
 
     parser.add_argument('-v', '--verbose', action='store_true', help='Runs in verbose mode')
     parser.add_argument('-i', '--interface',  help='Network interface to track', required=True)
+    parser.add_argument('-o', '--offer',action='store_true',  help='Testa bagaça')
 
     options = parser.parse_args()
 
@@ -42,7 +42,7 @@ def spoof_init():
         recv = s.recv(BUFFER_SIZE)
         packet = parse(recv)
         try:
-            if packet.ip.udp.dhcp:
+            if packet.ip.udp.dhcp.type:
                 print ('Detected a dhcp packet:')
         except AttributeError:
             continue
