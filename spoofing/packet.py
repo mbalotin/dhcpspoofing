@@ -38,7 +38,7 @@ class UdpPacket:
 
 class DhcpPacket:
     def __init__(self, buff, start):
-        dhcp_header = unpack('!BBBBIHH4s4s4s4s6s',buff[start:start + 34])
+        dhcp_header = unpack('!BBBB4sHH4s4s4s4s6s',buff[start:start + 34])
         self.type = dhcp_header[0]
         self.hrd_type = dhcp_header[1]
         self.hdr_addr_length = dhcp_header[2]
@@ -61,10 +61,10 @@ class DhcpOtions:
         self.dhcpType = dhc_options_header[3]
 
 class DhcpOffer:
-    def __init__(self, transactionID, clientMAC, clientIP):
+    def __init__(self, transaction_id, client_MAC, clientIP):
         #### Ethernet Header ##########
         ethernet = b'\xff\xff\xff\xff\xff\xff'
-        ethernet += getMyMAC()
+        ethernet += my_MAC()
         ethernet += b'\x08\x00'
         ### IP Header ################ ip_header
         ip_header = b'\x45' #version length
@@ -76,8 +76,11 @@ class DhcpOffer:
         ip_header += b'\x80' #ttl 
         ip_header += b'\x11' #protool (udp)
         ip_header += b'\x00\x00' #checksum
-        ip_header += getMyIP() #source 
-        ip_header += b'\xff\xff\xff\xff' #destination  
+        ip_header += my_IP() #source
+        ip_header += b'\xff\xff\xff\xff' #destination
+
+        ip_header[10:12] = checksum_IP(ip_header)
+
         ### UDP Header ############### udp_header
         udp_header = b'\x00\x43' #source port 
         udp_header += b'\x00\x44' #dest port
@@ -88,14 +91,14 @@ class DhcpOffer:
         bootp += b'\x01' #hw type
         bootp += b'\x06' #hw addr len
         bootp += b'\x00' #hops
-        bootp += self.formatTransactionID(transactionID)
+        bootp += transaction_id
         bootp += b'\x00\x00' #seconds_elapsed
         bootp += b'\x00\x00' #bootp_flags
         bootp += b'\x00\x00\x00\x00' #client_ip
         bootp += b'\x00\x00\x00\x00' #your_ip_address
         bootp += b'\x0a\x2a\x00\x01' #next_server_ip
         bootp += b'\x00\x00\x00\x00' #client_hwaddr_padding
-        bootp += clientMAC
+        bootp += client_MAC
         bootp += b'\x00' * 10 #client_hwaddr_padding
         bootp += b'\x00' * 64 #contains server hostname which is not given
         bootp += b'\x00' * 128 #bootfile name
@@ -105,7 +108,7 @@ class DhcpOffer:
         bootp += b'\x02' #offer 
         bootp += b'\x36' #option 54
         bootp += b'\x04'
-        bootp += getMyIP()
+        bootp += my_IP()
         bootp += b'\x33' #option 51
         bootp += b'\x04'
         bootp += b'\xff\xff\xff\xff' #4294962957 segundos
@@ -126,23 +129,14 @@ class DhcpOffer:
         bootp += b'\x0a\x2a\x00\x01' #dns
         bootp += b'\x03' #option 3 
         bootp += b'\x04'
-        bootp += getMyIP() #router
+        bootp += my_IP() #router
         bootp += b'\xff'
         bootp += b'\x00' * 8 #padding
         self.packet = ethernet + ip_header + udp_header + bootp
 
 
-    def getPacket(self):
-        return self.packet
 
-    def formatTransactionID(self,transactionID):
-        hexadecimal =  str(hex(transactionID))
-        hexadecimal = hexadecimal[2:]
-        return unhexlify(hexadecimal)
-
-
-
-def getMyIP():
+def my_IP():
     s = socket(AF_INET, SOCK_DGRAM)
     s.connect(('8.8.8.8', 0))  # connecting to a UDP address doesn't send packets
     local_ip_address = s.getsockname()[0]
@@ -156,7 +150,7 @@ def getMyIP():
     return unhexlify(ip_hexadecimal) #e.g b'\xc0\xa8\x0f\x05' = 192.168.15.5
 
 
-def getMyMAC():
+def my_MAC():
     # e.g \xff\xff\xff\xff\xff\xff = ff:ff:ff:ff:ff:ff
     mac_num = str(hex(uuid.getnode()))
     mac_num = mac_num[2:]
@@ -165,7 +159,8 @@ def getMyMAC():
     #print (unhexlify(mac_num))
     return unhexlify(mac_num)
 
-def checksumIP(msg):
+def checksum_IP(msg):
+    print(type(msg))
     s = 0
      
     # loop taking 2 characters at a time
