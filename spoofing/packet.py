@@ -1,15 +1,16 @@
 #!/usr/bin/python3 -tt
 from struct import unpack
-from binascii import hexlify, unhexlify
-from collections import defaultdict
 from socket import socket, inet_ntoa, AF_INET, SOCK_DGRAM
-import uuid
-import struct
 from datetime import datetime
 
 IP_PROTOCOL = 0x0800
 UDP_PROTOCOL = 0x11
 TCP_PROTOCOL = 0x06
+
+REQUEST_IP_ADDRESS = 50
+REQUEST_TYPE = 53
+OPTIONS_END = 255
+CLIENT_IDENTIFIER = 61
 
 class Packet:
     def __init__(self, buff):
@@ -56,17 +57,30 @@ class DhcpPacket:
         self.next_server_ip = inet_ntoa(dhcp_header[9])
         self.relay_agent_ip = inet_ntoa(dhcp_header[10])
         self.client_mac = dhcp_header[11]
-        self.dhcpOptions = DhcpOtions(buff, start + 34)      
+        self.dhcpOptions = DhcpOtions(buff, start + 240)
 
 class DhcpOtions:
     def __init__(self, buff, start):
-        dhc_options_header = unpack('!206sBBB9sBB4s', buff[start: 300]) #206 useless bytes *202 of them are 0s* and 4 for Magic cookie
-        self.option = dhc_options_header[1]
-        self.length = dhc_options_header[2]
-        self.dhcpType = dhc_options_header[3]
-        self.option2 = dhc_options_header[5]
-        self.length2 = dhc_options_header[6]
-        self.requested_ip = dhc_options_header[7]
+        pivot = start
+        self.requested_ip = None
+        self.type = None
+        while pivot < len(buff):
+            option = buff[pivot]
+            length = buff[pivot + 1 ]
+            if option == REQUEST_IP_ADDRESS:
+                self.requested_ip = buff[pivot+2:pivot+length+2]
+            if option == REQUEST_TYPE:
+                self.type = buff[pivot+2:pivot+length+2]
+            if option == OPTIONS_END:
+                break
+            pivot += length + 2
+        #dhc_options_header = unpack('!206sBBB9sBB4s', buff[start: 300]) #206 useless bytes *202 of them are 0s* and 4 for Magic cookie
+        #self.option = dhc_options_header[1]
+        #self.length = dhc_options_header[2]
+        #self.dhcpType = dhc_options_header[3]
+        #self.option2 = dhc_options_header[5]
+        #self.length2 = dhc_options_header[6]
+        #self.requested_ip = dhc_options_header[7]
 
 class TcpPacket:
     def __init__(self, buff, start):

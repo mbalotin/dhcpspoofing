@@ -1,8 +1,8 @@
 #!/usr/bin/python3 -tt
 
 import uuid
-import fcntl, socket, struct
-from binascii import hexlify, unhexlify
+import socket, struct
+from binascii import unhexlify
 from socket import socket, inet_ntoa, AF_INET, SOCK_DGRAM
 
 
