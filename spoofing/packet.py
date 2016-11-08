@@ -66,13 +66,13 @@ class DhcpOtions:
         self.type = None
         while pivot < len(buff):
             option = buff[pivot]
-            length = buff[pivot + 1 ]
+            if option == OPTIONS_END:
+                break
+            length = buff[pivot + 1]
             if option == REQUEST_IP_ADDRESS:
                 self.requested_ip = buff[pivot+2:pivot+length+2]
             if option == REQUEST_TYPE:
                 self.type = buff[pivot+2:pivot+length+2]
-            if option == OPTIONS_END:
-                break
             pivot += length + 2
         #dhc_options_header = unpack('!206sBBB9sBB4s', buff[start: 300]) #206 useless bytes *202 of them are 0s* and 4 for Magic cookie
         #self.option = dhc_options_header[1]
