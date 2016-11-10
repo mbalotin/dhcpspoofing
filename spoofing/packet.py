@@ -32,9 +32,49 @@ class IpPacket:
         self.udp = None
         if ((hex(self.protocol)) == hex(UDP_PROTOCOL)):
             self.udp = UdpPacket(buff, 14 + self.length)
+            if self.destination == 67:
+                self.dns = DnsPacket(buff, self.length + 22)
         self.tcp = None
         if((hex(self.protocol)) == hex(TCP_PROTOCOL)):
             self.tcp = TcpPacket(buff, 14 + self.length)
+
+class DnsPacket:
+    def __init__(self, buff, start):
+        dns_header = unpack('!HHHHHH', buff[start:])
+        self.transaction_id = dns_header[0]
+        self.flags = dns_header[1]
+        self.questions = dns_header[2]
+        self.answer_rr = dns_header[3]
+        self.authority_rr = dns_header[4]
+        self.additional_rr = dns_header[5]
+
+        total_questions = 0
+        domain = None
+        pivot = start + 12
+        desc_init = start + 12
+        desc_end = start + 12
+        while pivot < len(buff):
+            if buff[pivot] == 0:
+                if total_questions < self.questions:
+                    total_questions += 1
+                    pivot += 4
+                    desc_init = pivot
+                else:
+                    if buff[pivot] & 0xc0:
+                        # Remove os primeros dois bits que indicam que é uma referência
+                        reference_pivot = (buff[pivot:pivot + 2] * 0x30)
+                        start_reference = reference_pivot
+                        while buff[reference_pivot] != 0:
+                            reference_pivot += 1
+                        domain = buff[start_reference: reference_pivot]
+                    else:
+                        domain = buff[desc_init:pivot]
+                    pivot += 2
+                    # tests if is a Host adress Answer
+                    if buff[pivot: pivot + 2] == 0x0001:
+                        
+            else:
+                pivot += 1
 
 class UdpPacket:
     def __init__(self, buff, start):
@@ -74,13 +114,6 @@ class DhcpOtions:
             if option == REQUEST_TYPE:
                 self.type = buff[pivot+2:pivot+length+2]
             pivot += length + 2
-        #dhc_options_header = unpack('!206sBBB9sBB4s', buff[start: 300]) #206 useless bytes *202 of them are 0s* and 4 for Magic cookie
-        #self.option = dhc_options_header[1]
-        #self.length = dhc_options_header[2]
-        #self.dhcpType = dhc_options_header[3]
-        #self.option2 = dhc_options_header[5]
-        #self.length2 = dhc_options_header[6]
-        #self.requested_ip = dhc_options_header[7]
 
 class TcpPacket:
     def __init__(self, buff, start):
