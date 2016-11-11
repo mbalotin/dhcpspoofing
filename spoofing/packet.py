@@ -9,6 +9,7 @@ TCP_PROTOCOL = 0x06
 
 REQUEST_IP_ADDRESS = 50
 REQUEST_TYPE = 53
+REQUEST_HOST_NAME = 12
 OPTIONS_END = 255
 CLIENT_IDENTIFIER = 61
 
@@ -32,21 +33,26 @@ class IpPacket:
         self.udp = None
         if ((hex(self.protocol)) == hex(UDP_PROTOCOL)):
             self.udp = UdpPacket(buff, 14 + self.length)
-            if self.destination == 67:
-                self.dns = DnsPacket(buff, self.length + 22)
         self.tcp = None
         if((hex(self.protocol)) == hex(TCP_PROTOCOL)):
             self.tcp = TcpPacket(buff, 14 + self.length)
 
+"""
+Unused
+"""
 class DnsPacket:
     def __init__(self, buff, start):
-        dns_header = unpack('!HHHHHH', buff[start:])
+        dns_header = unpack('!HHHHHH', buff[start:start + 12])
+
+        print ('-starting dns packet, starting at: ', start)
         self.transaction_id = dns_header[0]
         self.flags = dns_header[1]
         self.questions = dns_header[2]
         self.answer_rr = dns_header[3]
         self.authority_rr = dns_header[4]
         self.additional_rr = dns_header[5]
+
+        print (self.__dict__)
 
         total_questions = 0
         domain = None
@@ -59,7 +65,11 @@ class DnsPacket:
                     total_questions += 1
                     pivot += 4
                     desc_init = pivot
+
+                    print ('    jumped question ',total_questions, ' from ', self.questions)
                 else:
+
+                    print ('    found answer')
                     if buff[pivot] & 0xc0:
                         # Remove os primeros dois bits que indicam que é uma referência
                         reference_pivot = (buff[pivot:pivot + 2] * 0x30)
@@ -67,11 +77,21 @@ class DnsPacket:
                         while buff[reference_pivot] != 0:
                             reference_pivot += 1
                         domain = buff[start_reference: reference_pivot]
+                        pivot += 2
                     else:
                         domain = buff[desc_init:pivot]
-                    pivot += 2
+
+                    print ('    ', domain)
                     # tests if is a Host adress Answer
+                    pivot += 6
+                    addr_length = unpack('!H', buff[pivot:pivot + 2])
+                    pivot += 2
                     if buff[pivot: pivot + 2] == 0x0001:
+                        ip = buff[pivot:pivot+addr_length]
+                        print ('    ',domain,' - ','ip')
+
+                    pivot += addr_length
+
                         
             else:
                 pivot += 1
@@ -113,6 +133,8 @@ class DhcpOtions:
                 self.requested_ip = buff[pivot+2:pivot+length+2]
             if option == REQUEST_TYPE:
                 self.type = buff[pivot+2:pivot+length+2]
+            if option == REQUEST_HOST_NAME:
+                self.host = buff[pivot+2:pivot+length+2]
             pivot += length + 2
 
 class TcpPacket:
@@ -161,7 +183,8 @@ class HttpPacket:
                     buff_index += 1
                     curr_byte = buff[buff_index]
                 self.time = datetime.now()
-                self.URL = host + URI
+                self.URL = str(host + URI, 'utf-8') # unpack('!'+str(len(host + URI))+'s' ,host + URI)[0]
+
         except IndexError:
             print("HTTP Packet Error. Index out of Bounds")
 
@@ -171,6 +194,7 @@ class HttpsPacket:
     def __init__(self, buff, start):
         self.time = None
         self.domain = None
+        self.domain_bytes = None
         try:
             buff_index = start
             if buff[buff_index] == 0x16:
@@ -187,13 +211,14 @@ class HttpsPacket:
                     buff_index += 7
                     domain_length = (buff[buff_index] << 8) + buff[buff_index+1]
                     buff_index += 2
-                    self.domain = (buff[buff_index]).to_bytes(1, byteorder='big')
+                    self.domain_bytes = (buff[buff_index]).to_bytes(1, byteorder='big')
                     buff_index += 1
                     domain_length -= 1
                     while domain_length > 0:
-                        self.domain += (buff[buff_index]).to_bytes(1, byteorder='big')
+                        self.domain_bytes += (buff[buff_index]).to_bytes(1, byteorder='big')
                         buff_index += 1
                         domain_length -= 1
+                    self.domain = self.domain_bytes.decode() # unpack('!'+str(len(self.domain_bytes))+'s' ,self.domain_bytes)[0]
                     self.time = datetime.now()
         except IndexError:
             print("HTTPS Packet Error. Index out of Bounds")

