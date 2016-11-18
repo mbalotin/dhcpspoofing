@@ -6,6 +6,7 @@ from spoofing.assembler import DhcpPacket
 from spoofing.ippool import IpPool
 from spoofing.html import addListEntry
 import spoofing.html
+from collections import defaultdict
 
 
 OFFER = 1
@@ -15,7 +16,6 @@ class log:
 
     def __init__(self, prefix):
         self.prefix = prefix
-
 
     def __call__(self, *args, **kwargs):
         def wrapper (*args, **kwargs):
@@ -54,7 +54,10 @@ def spoof_init():
 
     spoofing.html.createHistory()
 
+    host_ip = dict()
+
     BUFFER_SIZE = 1518
+    hostnames = defaultdict(lambda: '')
     while 1:
         recv = s.recv(BUFFER_SIZE)
         packet = parse(recv)
@@ -73,16 +76,23 @@ def spoof_init():
                             packet.ip.udp.dhcp.dhcpOptions.requested_ip = ip_pool.get_ip_for(packet.origin_mac)
                         pacote = DhcpPacket(ACK, packet.ip.udp.dhcp.transaction_id, packet.origin_mac,
                                             packet.ip.udp.dhcp.dhcpOptions.requested_ip).packet
+
                         s.send(pacote)
+                    if packet.ip.udp.dhcp.dhcpOptions.host is not None:
+                        if packet.ip.udp.dhcp.dhcpOptions.requested_ip != None:
+                            hostnames[inet_ntoa(packet.ip.udp.dhcp.dhcpOptions.requested_ip)] = packet.ip.udp.dhcp.dhcpOptions.host.decode()
+
         except AttributeError:
             try:
                 if packet.ip.tcp:
                     if packet.ip.tcp.http.URL:
-                        addListEntry(packet.ip.tcp.http.time, packet.ip.destination, '(TODO)', packet.ip.tcp.http.URL)
+                        addListEntry(packet.ip.tcp.http.time, packet.ip.source, hostnames[packet.ip.source], packet.ip.tcp.http.URL)
+
             except AttributeError:
                 try:
                     if packet.ip.tcp:
                         if packet.ip.tcp.https.domain:
-                            addListEntry (packet.ip.tcp.https.time, packet.ip.destination, '(TODO)',packet.ip.tcp.https.domain )
+                            addListEntry (packet.ip.tcp.https.time, packet.ip.source, hostnames[packet.ip.source],packet.ip.tcp.https.domain )
+
                 except AttributeError:
                     continue
