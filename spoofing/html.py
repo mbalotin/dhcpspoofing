@@ -5,6 +5,7 @@ def createHistory():
     history.write("<title>Historico de Navegacao</title>\n")
     history.write("</header>\n")
 
+    history.write("commit test\n")
     history.close()
 
 def addListEntry(time, ip, host_name, link):
